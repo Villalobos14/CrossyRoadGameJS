@@ -4,29 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crossy Road</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <canvas id="gameCanvas" width="800" height="600" style="border: 1px solid black;"></canvas>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+    <div>
+        <button id="startButton">Iniciar Juego</button>
+        <button id="stopButton">Terminar Juego</button>
+    </div>
 
-        // Dibujar jugador
-        const player = { x: 50, y: 550, width: 40, height: 40 };
-        
-        function drawPlayer() {
-            ctx.fillStyle = 'blue';
-            ctx.fillRect(player.x, player.y, player.width, player.height);
-        }
+    <script type="module">
+        import { Game } from './src/game.js';
+        const game = new Game();
 
-        function gameLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpiar canvas
-            drawPlayer();
-            requestAnimationFrame(gameLoop); // Continuar la animación
-        }
+        window.addEventListener('keydown', function(e) {
+            switch (e.key) {
+                case 'ArrowUp': game.movePlayer('up'); break;
+                case 'ArrowDown': game.movePlayer('down'); break;
+                case 'ArrowLeft': game.movePlayer('left'); break;
+                case 'ArrowRight': game.movePlayer('right'); break;
+            }
+        });
 
-        gameLoop(); // Iniciar el bucle del juego
+        document.getElementById('startButton').addEventListener('click', function() {
+            game.startGame();
+        });
+        document.getElementById('stopButton').addEventListener('click', function() {
+            game.stopGame();
+        });
     </script>
 </body>
 </html>
