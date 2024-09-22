@@ -1,15 +1,18 @@
+// main.js
+
+// Configuración de la escena, cámara y renderizador
 const scene = new THREE.Scene();
 
 const aspect = window.innerWidth / window.innerHeight;
 const cameraWidth = 20;
 let cameraHeight = cameraWidth / aspect;
 const camera = new THREE.OrthographicCamera(
-  -cameraWidth / 2,
-  cameraWidth / 2,
-  cameraHeight / 2,
-  -cameraHeight / 2,
-  0.1,
-  1000
+  -cameraWidth / 2, // Límite izquierdo
+  cameraWidth / 2,  // Límite derecho
+  cameraHeight / 2, // Límite superior
+  -cameraHeight / 2, // Límite inferior
+  0.1,  // Distancia mínima
+  1000  // Distancia máxima
 );
 camera.position.z = 10;
 camera.position.y = 5 + 5;
@@ -29,6 +32,7 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// Crear el jugador y añadirlo a la escena
 const player = createPlayer();
 scene.add(player);
 
@@ -46,6 +50,7 @@ function createPlayer() {
   return group;
 }
 
+// Variables para controlar el movimiento del jugador
 let moveUp = false, moveDown = false, moveLeft = false, moveRight = false;
 let gameOverState = false;
 const playerSpeed = 0.2;
@@ -56,10 +61,20 @@ let currentLane = Math.floor(player.position.y);
 const scoreElement = document.getElementById('score');
 function updateScore() {
   scoreElement.textContent = `Puntaje: ${score}`;
+
+  // Verificar si el puntaje es 300 o más para terminar el juego
+  if (score >= 300) {
+    gameOverState = true;
+    document.getElementById('game-over').style.display = 'block';
+    document.getElementById('game-over').textContent = '¡Has ganado!';
+    document.getElementById('restart-button').style.display = 'block';
+  }
 }
 
+// Maneja los eventos de teclado para mover al jugador
 window.addEventListener('keydown', (event) => {
   const key = event.key.toLowerCase();
+
   if (key === 'w') moveUp = true;
   if (key === 's') moveDown = true;
   if (key === 'a') moveLeft = true;
@@ -68,31 +83,46 @@ window.addEventListener('keydown', (event) => {
 
 window.addEventListener('keyup', (event) => {
   const key = event.key.toLowerCase();
+
   if (key === 'w') moveUp = false;
   if (key === 's') moveDown = false;
   if (key === 'a') moveLeft = false;
   if (key === 'd') moveRight = false;
 });
 
+// Variables para controlar los carriles (lanes) del juego
 let lanes = [];
-const initialLaneCount = 20;
+const initialLaneCount = 40;
 const laneTypes = ['grass', 'road', 'truckLane'];
+const safeLaneCount = 5; // Número de carriles iniciales sin obstáculos
 
+// Función para generar un nuevo carril
 function addLane() {
   const index = lanes.length;
   const laneY = index === 0 ? player.position.y : lanes[index - 1].position.y + 1;
-  const type = laneTypes[Math.floor(Math.random() * laneTypes.length)];
+  let type;
 
-  const lane = createLane(laneY, type);
+  if (index < safeLaneCount) {
+    // Los primeros carriles son siempre de césped
+    type = 'grass';
+  } else {
+    // Después de los carriles seguros, selecciona el tipo de carril al azar
+    type = laneTypes[Math.floor(Math.random() * laneTypes.length)];
+  }
+
+  const lane = createLane(laneY, type, index);
   lanes.push(lane);
 }
 
+// Genera los carriles iniciales al comienzo del juego
 for (let i = 0; i < initialLaneCount; i++) {
   addLane();
 }
 
-function createLane(y, type) {
+// Función para crear un carril
+function createLane(y, type, index) {
   let color;
+
   if (type === 'grass') color = 0x7CFC00;
   else if (type === 'road') color = 0x555555;
   else if (type === 'truckLane') color = 0xAAAAAA;
@@ -105,21 +135,30 @@ function createLane(y, type) {
   scene.add(plane);
 
   const obstacles = [];
-  if (type === 'road') {
-    if (Math.random() > 0.3) {
-      const car = createCar(y);
-      obstacles.push(car);
-    }
-  } else if (type === 'truckLane') {
-    if (Math.random() > 0.3) {
-      const truck = createTruck(y);
-      obstacles.push(truck);
+
+  // Generar obstáculos sólo si el índice del carril es mayor o igual al número de carriles seguros
+  if (index >= safeLaneCount) {
+    if (type === 'road') {
+      // Generar entre 1 y 3 carros
+      const numCars = Math.floor(Math.random() * 3) + 1;
+      for (let i = 0; i < numCars; i++) {
+        const car = createCar(y);
+        obstacles.push(car);
+      }
+    } else if (type === 'truckLane') {
+      // Generar entre 1 y 2 camiones
+      const numTrucks = Math.floor(Math.random() * 2) + 1;
+      for (let i = 0; i < numTrucks; i++) {
+        const truck = createTruck(y);
+        obstacles.push(truck);
+      }
     }
   }
 
   return { position: plane.position, type, mesh: plane, obstacles };
 }
 
+// Función para crear un auto
 function createCar(y) {
   const car = new THREE.Group();
 
@@ -141,20 +180,20 @@ function createCar(y) {
     [-0.7, 0, 0.5],
     [0.7, 0, 0.5],
     [-0.7, 0, -0.5],
-    [0.7, 0, -0.5]
+    [0.7, 0, -0.5],
   ];
-  wheelPositions.forEach(pos => {
+  wheelPositions.forEach((pos) => {
     const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
     wheel.rotation.z = Math.PI / 2;
     wheel.position.set(pos[0], 0.1, pos[2]);
     car.add(wheel);
   });
 
-  car.position.x = Math.random() > 0.5 ? -cameraWidth / 2 - 2 : cameraWidth / 2 + 2;
+  car.position.x = Math.random() * cameraWidth - cameraWidth / 2;
   car.position.y = y;
-  car.direction = car.position.x > 0 ? -1 : 1;
+  car.direction = Math.random() > 0.5 ? -1 : 1;
 
-  car.update = function() {
+  car.update = function () {
     this.position.x += this.direction * 0.1;
     if (Math.abs(this.position.x) > cameraWidth / 2 + 5) {
       scene.remove(this);
@@ -166,6 +205,7 @@ function createCar(y) {
   return car;
 }
 
+// Función para crear un camión
 function createTruck(y) {
   const truck = new THREE.Group();
 
@@ -189,20 +229,20 @@ function createTruck(y) {
     [2, 0, 0.5],
     [-2, 0, -0.5],
     [-0.5, 0, -0.5],
-    [2, 0, -0.5]
+    [2, 0, -0.5],
   ];
-  wheelPositions.forEach(pos => {
+  wheelPositions.forEach((pos) => {
     const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
     wheel.rotation.z = Math.PI / 2;
     wheel.position.set(pos[0], 0.15, pos[2]);
     truck.add(wheel);
   });
 
-  truck.position.x = Math.random() > 0.5 ? -cameraWidth / 2 - 3 : cameraWidth / 2 + 3;
+  truck.position.x = Math.random() * cameraWidth - cameraWidth / 2;
   truck.position.y = y;
-  truck.direction = truck.position.x > 0 ? -1 : 1;
+  truck.direction = Math.random() > 0.5 ? -1 : 1;
 
-  truck.update = function() {
+  truck.update = function () {
     this.position.x += this.direction * 0.08;
     if (Math.abs(this.position.x) > cameraWidth / 2 + 6) {
       scene.remove(this);
@@ -214,32 +254,25 @@ function createTruck(y) {
   return truck;
 }
 
+// Función para mover al jugador
 function movePlayer() {
   const moveAmount = playerSpeed;
-  let moved = false;
 
-  if (moveUp) {
-    player.position.y += moveAmount;
-    moved = true;
-  }
-  if (moveDown) {
-    player.position.y -= moveAmount;
-    moved = true;
-  }
-  if (moveLeft) {
-    player.position.x -= moveAmount;
-    moved = true;
-  }
-  if (moveRight) {
-    player.position.x += moveAmount;
-    moved = true;
-  }
+  if (moveUp) player.position.y += moveAmount;
+  if (moveDown) player.position.y -= moveAmount;
+  if (moveLeft) player.position.x -= moveAmount;
+  if (moveRight) player.position.x += moveAmount;
 
-  player.position.x = Math.max(-cameraWidth / 2 + 0.5, Math.min(cameraWidth / 2 - 0.5, player.position.x));
+  // Limitar el movimiento del jugador
+  player.position.x = Math.max(
+    -cameraWidth / 2 + 0.5,
+    Math.min(cameraWidth / 2 - 0.5, player.position.x)
+  );
 
   const minY = player.position.y - 5;
   player.position.y = Math.max(minY, player.position.y);
 
+  // Actualizar el puntaje si el jugador ha avanzado a un nuevo carril
   const newLane = Math.floor(player.position.y);
   if (newLane > currentLane) {
     score += newLane - currentLane;
@@ -248,14 +281,15 @@ function movePlayer() {
   }
 }
 
+// Función para detectar colisiones
 const playerBox = new THREE.Box3();
 const obstacleBox = new THREE.Box3();
 
 function detectCollisions() {
   playerBox.setFromObject(player);
 
-  lanes.forEach(lane => {
-    lane.obstacles.forEach(obstacle => {
+  lanes.forEach((lane) => {
+    lane.obstacles.forEach((obstacle) => {
       if (obstacle.removed) return;
       obstacleBox.setFromObject(obstacle);
       if (playerBox.intersectsBox(obstacleBox)) {
@@ -265,37 +299,21 @@ function detectCollisions() {
   });
 }
 
+// Función para terminar el juego
 function endGame() {
   gameOverState = true;
   document.getElementById('game-over').style.display = 'block';
   document.getElementById('restart-button').style.display = 'block';
 }
 
+// Función para reiniciar el juego
 function restartGame() {
-  gameOverState = false;
-  document.getElementById('game-over').style.display = 'none';
-  document.getElementById('restart-button').style.display = 'none';
-
-  lanes.forEach(lane => {
-    scene.remove(lane.mesh);
-    lane.obstacles.forEach(obstacle => {
-      scene.remove(obstacle);
-    });
-  });
-  lanes = [];
-
-  for (let i = 0; i < initialLaneCount; i++) {
-    addLane();
-  }
-
-  player.position.set(0, 5, 0);
-  score = 0;
-  currentLane = Math.floor(player.position.y);
-  updateScore();
+  window.location.reload();
 }
 
 document.getElementById('restart-button').addEventListener('click', restartGame);
 
+// Bucle de animación
 function animate() {
   requestAnimationFrame(animate);
   if (!gameOverState) {
@@ -310,12 +328,12 @@ function animate() {
 animate();
 
 function updateObstacles() {
-  lanes.forEach(lane => {
-    lane.obstacles.forEach(obstacle => {
+  lanes.forEach((lane) => {
+    lane.obstacles.forEach((obstacle) => {
       if (obstacle.removed) return;
       obstacle.update();
     });
-    lane.obstacles = lane.obstacles.filter(obstacle => !obstacle.removed);
+    lane.obstacles = lane.obstacles.filter((obstacle) => !obstacle.removed);
   });
 }
 
@@ -326,10 +344,10 @@ function checkGenerateNewLanes() {
     addLane();
   }
 
-  lanes = lanes.filter(lane => {
+  lanes = lanes.filter((lane) => {
     if (lane.position.y < player.position.y - 20) {
       scene.remove(lane.mesh);
-      lane.obstacles.forEach(obstacle => {
+      lane.obstacles.forEach((obstacle) => {
         scene.remove(obstacle);
       });
       return false;
@@ -342,5 +360,6 @@ function moveCamera() {
   camera.position.y = player.position.y + 5;
 }
 
+// Añade una luz ambiental a la escena
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
 scene.add(ambientLight);

@@ -1,42 +1,54 @@
-let trucks = [];
-let cameraWidth = 20;
+// truckWorker.js
 
-// Recibir mensajes del hilo principal
+let trucks = [];
+let truckIdCounter = 0;
+const cameraWidth = 20;
+
 onmessage = function(event) {
   const data = event.data;
-  if (data.type === 'init') {
-    cameraWidth = data.cameraWidth;
-    createTruck();
+  if (data.type === 'createTruck') {
+    createTruck(data.laneY);
+  } else if (data.type === 'reset') {
+    resetWorker();
   }
 };
 
-// Crear un camión
-function createTruck() {
+function createTruck(laneY) {
+  const id = truckIdCounter++;
   const truck = {
+    id: id,
     position: {
-      x: Math.random() > 0.5 ? -cameraWidth / 2 - 3 : cameraWidth / 2 + 3,
-      y: 0,
+      x: Math.random() * cameraWidth - cameraWidth / 2,
+      y: laneY,
       z: 0
     },
-    direction: Math.random() > 0.5 ? 1 : -1
+    direction: Math.random() > 0.5 ? -1 : 1
   };
   trucks.push(truck);
-  postMessage({ type: 'createTruck', position: truck.position });
+
+  // Notificar al hilo principal para crear el camión
+  postMessage({ type: 'newTruck', truck: truck });
 }
 
-// Actualizar la posición de los camiones
 function updateTrucks() {
+  const trucksToRemove = [];
   trucks.forEach(truck => {
     truck.position.x += truck.direction * 0.08;
     if (Math.abs(truck.position.x) > cameraWidth / 2 + 6) {
-      // Reiniciar el camión
-      truck.position.x = truck.direction > 0 ? -cameraWidth / 2 - 3 : cameraWidth / 2 + 3;
+      trucksToRemove.push(truck.id);
     }
   });
-  postMessage({ type: 'updateTrucks', positions: trucks.map(truck => truck.position) });
+
+  trucks = trucks.filter(truck => !trucksToRemove.includes(truck.id));
+
+  // Enviar actualizaciones al hilo principal
+  postMessage({ type: 'updateTrucks', trucks: trucks, trucksToRemove: trucksToRemove });
 }
 
-// Bucle de actualización
-setInterval(() => {
-  updateTrucks();
-}, 50); // Actualizar cada 50ms
+function resetWorker() {
+  trucks = [];
+  truckIdCounter = 0;
+}
+
+// Iniciar el bucle de actualización
+setInterval(updateTrucks, 50);
