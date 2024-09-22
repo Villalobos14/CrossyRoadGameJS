@@ -1,0 +1,74 @@
+/* Configuración básica */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  #game-container {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    height: 600px;
+    background-color: #000;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  
+  #score-container {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 24px;
+    color: #fff;
+  }
+  
+  #game-over {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 36px;
+    color: red;
+    display: none;
+  }
+  
+  #restart-button {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    font-size: 18px;
+    color: #fff;
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    display: none;
+  }
+  
+  #restart-button:hover {
+    background-color: #0056b3;
+  }
+  
+  /* Animación para mostrar el mensaje de Game Over */
+  #game-over.show {
+    animation: fadeIn 1s forwards;
+  }
+  
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  
