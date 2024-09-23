@@ -1,82 +1,139 @@
-// Configuración de la escena, cámara y renderizador
-const scene = new THREE.Scene();
-const aspect = window.innerWidth / window.innerHeight;
-const cameraWidth = 20;
-let cameraHeight = cameraWidth / aspect;
+const startMenu = document.getElementById('start-menu');
+const startButton = document.getElementById('start-button');
+const gameOverModal = document.getElementById('game-over-modal');
+const restartButton = document.getElementById('restart-button');
+const scoreElement = document.getElementById('score');
+const finalScoreElement = document.getElementById('final-score');
 
-const camera = new THREE.OrthographicCamera(
-  -cameraWidth / 2, cameraWidth / 2,
-  cameraHeight / 2, -cameraHeight / 2,
-  0.1, 1000
-);
-camera.position.z = 10;
-camera.position.y = 5 + 5;
-
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-window.addEventListener('resize', () => {
-  const aspect = window.innerWidth / window.innerHeight;
-  cameraHeight = cameraWidth / aspect;
-  camera.top = cameraHeight / 2;
-  camera.bottom = -cameraHeight / 2;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-// Crear los Workers
-const playerWorker = new Worker('src/workers/playerWorker.js');
-const carWorker = new Worker('src/workers/carWorker.js');
-const truckWorker = new Worker('src/workers/truckWorker.js');
-
-// Variables para controlar el movimiento del jugador
+let scene, camera, renderer;
+let playerWorker, carWorker, truckWorker;
+let player;
 let moveUp = false, moveDown = false, moveLeft = false, moveRight = false;
 let gameOverState = false;
 let score = 0;
 let currentLane = 5;
+let lanes = [];
+let obstacles = new Map();
+const playerBox = new THREE.Box3();
+const obstacleBox = new THREE.Box3();
+let ambientLight;
 
-const scoreElement = document.getElementById('score');
+startMenu.style.display = 'block';
+scoreElement.style.display = 'none';
+gameOverModal.style.display = 'none';
 
-// Inicializar el jugador y añadirlo a la escena
-const player = createPlayer();
-scene.add(player);
+startButton.addEventListener('click', () => {
+  startMenu.style.display = 'none';
+  scoreElement.style.display = 'block';
+  startGame();
+});
 
-// Enviar posición inicial al Worker del jugador
-playerWorker.postMessage({ type: 'init', position: { x: 0, y: 5, z: 0 } });
+restartButton.addEventListener('click', () => {
+  window.location.reload();
+});
 
-// Manejo del teclado para mover al jugador
-window.addEventListener('keydown', (event) => {
+function startGame() {
+  scene = new THREE.Scene();
+  const aspect = window.innerWidth / window.innerHeight;
+  const cameraWidth = 20;
+  let cameraHeight = cameraWidth / aspect;
+
+  camera = new THREE.OrthographicCamera(
+    -cameraWidth / 2,
+    cameraWidth / 2,
+    cameraHeight / 2,
+    -cameraHeight / 2,
+    0.1,
+    1000
+  );
+  camera.position.z = 10;
+  camera.position.y = 5 + 5;
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  window.addEventListener('resize', () => {
+    const aspect = window.innerWidth / window.innerHeight;
+    cameraHeight = cameraWidth / aspect;
+    camera.top = cameraHeight / 2;
+    camera.bottom = -cameraHeight / 2;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  playerWorker = new Worker('src/workers/playerWorker.js');
+  carWorker = new Worker('src/workers/carWorker.js');
+  truckWorker = new Worker('src/workers/truckWorker.js');
+
+  moveUp = false;
+  moveDown = false;
+  moveLeft = false;
+  moveRight = false;
+  gameOverState = false;
+  score = 0;
+  currentLane = 5;
+  lanes = [];
+  obstacles = new Map();
+
+  player = createPlayer();
+  scene.add(player);
+
+  ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+  scene.add(ambientLight);
+
+  playerWorker.postMessage({
+    type: 'init',
+    position: { x: 0, y: 5, z: 0 }
+  });
+
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
+
+  playerWorker.onmessage = handlePlayerWorkerMessage;
+  carWorker.onmessage = handleCarWorkerMessage;
+  truckWorker.onmessage = handleTruckWorkerMessage;
+
+  for (let i = 0; i < 40; i++) {
+    addLane();
+  }
+
+  animate();
+}
+
+function onKeyDown(event) {
   const key = event.key.toLowerCase();
   if (key === 'w') moveUp = true;
   if (key === 's') moveDown = true;
   if (key === 'a') moveLeft = true;
   if (key === 'd') moveRight = true;
-});
+}
 
-window.addEventListener('keyup', (event) => {
+function onKeyUp(event) {
   const key = event.key.toLowerCase();
   if (key === 'w') moveUp = false;
   if (key === 's') moveDown = false;
   if (key === 'a') moveLeft = false;
   if (key === 'd') moveRight = false;
-});
+}
 
-// Enviar comandos de movimiento al Worker del jugador
 function updatePlayer() {
   playerWorker.postMessage({
     type: 'move',
-    direction: { up: moveUp, down: moveDown, left: moveLeft, right: moveRight }
+    direction: {
+      up: moveUp,
+      down: moveDown,
+      left: moveLeft,
+      right: moveRight
+    }
   });
 }
 
-// Recibir la nueva posición del jugador desde el Worker
-playerWorker.onmessage = function(event) {
+function handlePlayerWorkerMessage(event) {
   if (event.data.type === 'updatePosition') {
     const newPosition = event.data.position;
     player.position.set(newPosition.x, newPosition.y, newPosition.z);
 
-    // Actualizar puntaje si el jugador avanza a un nuevo carril
     const newLane = Math.floor(newPosition.y);
     if (newLane > currentLane) {
       score += newLane - currentLane;
@@ -84,20 +141,40 @@ playerWorker.onmessage = function(event) {
       updateScore();
     }
   }
-};
+}
 
-// Función para actualizar el puntaje
 function updateScore() {
   scoreElement.textContent = `Puntaje: ${score}`;
   if (score >= 300) {
-    gameOverState = true;
-    document.getElementById('game-over').style.display = 'block';
-    document.getElementById('game-over').textContent = '¡Has ganado!';
-    document.getElementById('restart-button').style.display = 'block';
+    endGame();
   }
 }
 
-// Crear el jugador
+function endGame() {
+  gameOverState = true;
+  finalScoreElement.textContent = score;
+  scoreElement.style.display = 'none';
+  gameOverModal.style.display = 'block';
+
+  playerWorker.terminate();
+  carWorker.terminate();
+  truckWorker.terminate();
+
+  window.removeEventListener('keydown', onKeyDown);
+  window.removeEventListener('keyup', onKeyUp);
+}
+
+function animate() {
+  if (!gameOverState) {
+    requestAnimationFrame(animate);
+    updatePlayer();
+    detectCollisions();
+    checkGenerateNewLanes();
+    moveCamera();
+  }
+  renderer.render(scene, camera);
+}
+
 function createPlayer() {
   const group = new THREE.Group();
   const bodyGeometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
@@ -109,16 +186,14 @@ function createPlayer() {
   return group;
 }
 
-// Variables para controlar los carriles (lanes) del juego
-let lanes = [];
-const initialLaneCount = 40;
 const laneTypes = ['grass', 'road', 'truckLane'];
-const safeLaneCount = 5; // Número de carriles iniciales sin obstáculos
+const safeLaneCount = 5;
 
-// Función para generar un nuevo carril
 function addLane() {
   const index = lanes.length;
-  const laneY = index === 0 ? player.position.y : lanes[index - 1].position.y + 1;
+  const laneY = index === 0
+    ? player.position.y
+    : lanes[index - 1].position.y + 1;
   let type;
 
   if (index < safeLaneCount) {
@@ -131,26 +206,22 @@ function addLane() {
   lanes.push(lane);
 }
 
-// Genera los carriles iniciales al comienzo del juego
-for (let i = 0; i < initialLaneCount; i++) {
-  addLane();
-}
-
-// Función para crear un carril y solicitar creación de obstáculos al Worker correspondiente
 function createLane(y, type, index) {
   let color;
   if (type === 'grass') color = 0x7CFC00;
   else if (type === 'road') color = 0x555555;
   else if (type === 'truckLane') color = 0xAAAAAA;
 
-  const geometry = new THREE.PlaneGeometry(cameraWidth, 1);
-  const material = new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide });
+  const geometry = new THREE.PlaneGeometry(20, 1);
+  const material = new THREE.MeshBasicMaterial({
+    color: color,
+    side: THREE.DoubleSide
+  });
   const plane = new THREE.Mesh(geometry, material);
   plane.position.set(0, y, 0);
   plane.rotation.x = -Math.PI / 2;
   scene.add(plane);
 
-  // Solicitar creación de obstáculos al Worker correspondiente
   if (index >= safeLaneCount) {
     if (type === 'road') {
       const numCars = Math.floor(Math.random() * 3) + 1;
@@ -168,25 +239,21 @@ function createLane(y, type, index) {
   return { position: plane.position, type, mesh: plane };
 }
 
-// Mapa para almacenar los obstáculos en la escena
-const obstacles = new Map();
-
-// Funciones para manejar mensajes de los Workers
-carWorker.onmessage = function(event) {
+function handleCarWorkerMessage(event) {
   if (event.data.type === 'newCar') {
     const carData = event.data.car;
     const carMesh = createCarMesh(carData);
     obstacles.set(`car-${carData.id}`, { mesh: carMesh, type: 'car' });
     scene.add(carMesh);
   } else if (event.data.type === 'updateCars') {
-    event.data.cars.forEach(carData => {
+    event.data.cars.forEach((carData) => {
       const obstacle = obstacles.get(`car-${carData.id}`);
       if (obstacle) {
         obstacle.mesh.position.x = carData.position.x;
       }
     });
 
-    event.data.carsToRemove.forEach(carId => {
+    event.data.carsToRemove.forEach((carId) => {
       const obstacle = obstacles.get(`car-${carId}`);
       if (obstacle) {
         scene.remove(obstacle.mesh);
@@ -194,23 +261,26 @@ carWorker.onmessage = function(event) {
       }
     });
   }
-};
+}
 
-truckWorker.onmessage = function(event) {
+function handleTruckWorkerMessage(event) {
   if (event.data.type === 'newTruck') {
     const truckData = event.data.truck;
     const truckMesh = createTruckMesh(truckData);
-    obstacles.set(`truck-${truckData.id}`, { mesh: truckMesh, type: 'truck' });
+    obstacles.set(`truck-${truckData.id}`, {
+      mesh: truckMesh,
+      type: 'truck'
+    });
     scene.add(truckMesh);
   } else if (event.data.type === 'updateTrucks') {
-    event.data.trucks.forEach(truckData => {
+    event.data.trucks.forEach((truckData) => {
       const obstacle = obstacles.get(`truck-${truckData.id}`);
       if (obstacle) {
         obstacle.mesh.position.x = truckData.position.x;
       }
     });
 
-    event.data.trucksToRemove.forEach(truckId => {
+    event.data.trucksToRemove.forEach((truckId) => {
       const obstacle = obstacles.get(`truck-${truckId}`);
       if (obstacle) {
         scene.remove(obstacle.mesh);
@@ -218,9 +288,8 @@ truckWorker.onmessage = function(event) {
       }
     });
   }
-};
+}
 
-// Función para crear el modelo 3D de un carro
 function createCarMesh(carData) {
   const car = new THREE.Group();
   const bodyGeometry = new THREE.BoxGeometry(2, 0.5, 1);
@@ -229,11 +298,14 @@ function createCarMesh(carData) {
   body.position.y = 0.25;
   car.add(body);
 
-  car.position.set(carData.position.x, carData.position.y, carData.position.z);
+  car.position.set(
+    carData.position.x,
+    carData.position.y,
+    carData.position.z
+  );
   return car;
 }
 
-// Función para crear el modelo 3D de un camión
 function createTruckMesh(truckData) {
   const truck = new THREE.Group();
   const cabinGeometry = new THREE.BoxGeometry(1.5, 1, 1);
@@ -248,18 +320,18 @@ function createTruckMesh(truckData) {
   trailer.position.set(1.5, 0.5, 0);
   truck.add(trailer);
 
-  truck.position.set(truckData.position.x, truckData.position.y, truckData.position.z);
+  truck.position.set(
+    truckData.position.x,
+    truckData.position.y,
+    truckData.position.z
+  );
   return truck;
 }
-
-// Función para detectar colisiones
-const playerBox = new THREE.Box3();
-const obstacleBox = new THREE.Box3();
 
 function detectCollisions() {
   playerBox.setFromObject(player);
 
-  obstacles.forEach(obstacle => {
+  obstacles.forEach((obstacle) => {
     obstacleBox.setFromObject(obstacle.mesh);
     if (playerBox.intersectsBox(obstacleBox)) {
       endGame();
@@ -267,47 +339,13 @@ function detectCollisions() {
   });
 }
 
-// Función para terminar el juego
-function endGame() {
-  gameOverState = true;
-  document.getElementById('game-over').style.display = 'block';
-  document.getElementById('restart-button').style.display = 'block';
-
-  // Detener los Workers
-  playerWorker.postMessage({ type: 'reset' });
-  carWorker.postMessage({ type: 'reset' });
-  truckWorker.postMessage({ type: 'reset' });
-}
-
-// Función para reiniciar el juego
-function restartGame() {
-  window.location.reload();
-}
-
-document.getElementById('restart-button').addEventListener('click', restartGame);
-
-// Bucle de animación
-function animate() {
-  requestAnimationFrame(animate);
-  if (!gameOverState) {
-    updatePlayer();
-    detectCollisions();
-    checkGenerateNewLanes();
-    moveCamera();
-  }
-  renderer.render(scene, camera);
-}
-animate();
-
-// Función para verificar y generar nuevos carriles si es necesario
 function checkGenerateNewLanes() {
   const lastLane = lanes[lanes.length - 1];
   if (player.position.y > lastLane.position.y - 10) {
     addLane();
   }
 
-  // Remover carriles que están muy atrás
-  lanes = lanes.filter(lane => {
+  lanes = lanes.filter((lane) => {
     if (lane.position.y < player.position.y - 20) {
       scene.remove(lane.mesh);
       return false;
@@ -316,11 +354,6 @@ function checkGenerateNewLanes() {
   });
 }
 
-// Función para mover la cámara siguiendo al jugador
 function moveCamera() {
   camera.position.y = player.position.y + 5;
 }
-
-// Añade una luz ambiental a la escena
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-scene.add(ambientLight);

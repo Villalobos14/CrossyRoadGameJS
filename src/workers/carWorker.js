@@ -1,5 +1,3 @@
-// carWorker.js
-
 let cars = [];
 let carIdCounter = 0;
 const cameraWidth = 20;
@@ -26,7 +24,6 @@ function createCar(laneY) {
   };
   cars.push(car);
 
-  // Notificar al hilo principal para crear el carro
   postMessage({ type: 'newCar', car: car });
 }
 
@@ -41,7 +38,6 @@ function updateCars() {
 
   cars = cars.filter(car => !carsToRemove.includes(car.id));
 
-  // Enviar actualizaciones al hilo principal
   postMessage({ type: 'updateCars', cars: cars, carsToRemove: carsToRemove });
 }
 
@@ -50,5 +46,4 @@ function resetWorker() {
   carIdCounter = 0;
 }
 
-// Iniciar el bucle de actualización
 setInterval(updateCars, 50);

@@ -1,74 +1,105 @@
-/* Configuración básica */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  
-  body {
-    font-family: 'Arial', sans-serif;
-    background-color: #f0f0f0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    overflow: hidden;
-  }
-  
-  #game-container {
-    position: relative;
-    width: 100%;
-    max-width: 800px;
-    height: 600px;
-    background-color: #000;
-    border-radius: 10px;
-    overflow: hidden;
-  }
-  
-  #score-container {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    font-size: 24px;
-    color: #fff;
-  }
-  
-  #game-over {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 36px;
-    color: red;
-    display: none;
-  }
-  
-  #restart-button {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 10px 20px;
-    font-size: 18px;
-    color: #fff;
-    background-color: #007bff;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    display: none;
-  }
-  
-  #restart-button:hover {
-    background-color: #0056b3;
-  }
-  
-  /* Animación para mostrar el mensaje de Game Over */
-  #game-over.show {
-    animation: fadeIn 1s forwards;
-  }
-  
-  @keyframes fadeIn {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
-  }
-  
+/* Estilos generales */
+body, html {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Press Start 2P', sans-serif; /* Fuente retro */
+  background-color: #1e1e1e; /* Fondo oscuro */
+  color: #ffffff; /* Texto blanco */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+/* Menú de inicio */
+.menu {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.menu h1 {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  color: #00ff7f; /* Verde vibrante */
+}
+
+.menu-button {
+  background-color: #ffcc00;
+  border: none;
+  padding: 15px 30px;
+  font-size: 1.2rem;
+  color: #1e1e1e;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: transform 0.3s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.menu-button:hover {
+  transform: scale(1.1);
+}
+
+.hud {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 1.5rem;
+  background-color: rgba(0, 0, 0, 0.5); /* Fondo translúcido */
+  padding: 10px 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Modal de Game Over */
+.modal {
+  display: none; /* Oculto por defecto */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.8); /* Fondo oscuro translúcido */
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  width: 300px;
+  color: #ffffff;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+}
+
+.modal-content h2 {
+  font-size: 2rem;
+  margin-bottom: 20px;
+}
+
+.modal-content p {
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+}
+
+#final-score {
+  color: #ffcc00; /* Puntaje en dorado */
+}
+
+/* Botones de reinicio */
+#restart-button {
+  background-color: #ff5555; /* Rojo vibrante */
+  border: none;
+  padding: 10px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #fff;
+  border-radius: 10px;
+}
+
+#restart-button:hover {
+  background-color: #ff8888; /* Rojo más claro al pasar el mouse */
+}
+
+/* Efecto de transición */
+.modal, .menu {
+  transition: opacity 0.3s ease-in-out;
+}

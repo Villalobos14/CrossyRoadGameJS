@@ -2,14 +2,29 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Juego Concurrente</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="score">Puntaje: 0</div>
-  <div id="game-over" style="display: none;"></div>
-  <button id="restart-button" style="display: none;">Reiniciar</button>
+  <!-- Menú de inicio -->
+  <div id="start-menu" class="menu">
+    <h1>¡Bienvenido al Juego!</h1>
+    <button id="start-button" class="menu-button">Iniciar Juego</button>
+  </div>
 
+  <!-- Puntaje y modales de juego -->
+  <div id="score" class="hud">Puntaje: 0</div>
+
+  <div id="game-over-modal" class="modal">
+    <div class="modal-content">
+      <h2>¡Game Over!</h2>
+      <p>Tu puntaje: <span id="final-score"></span></p>
+      <button id="restart-button" class="menu-button">Reiniciar</button>
+    </div>
+  </div>
+
+  <!-- Importación de Three.js y el archivo principal del juego -->
   <script src="https://unpkg.com/three@0.149.0/build/three.min.js"></script>
   <script type="module" src="src/views/main.js"></script>
 </body>

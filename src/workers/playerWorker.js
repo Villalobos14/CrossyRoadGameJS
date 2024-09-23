@@ -1,5 +1,3 @@
-// playerWorker.js
-
 let playerPosition = { x: 0, y: 5, z: 0 };
 const playerSpeed = 0.2;
 
@@ -28,18 +26,14 @@ function movePlayer(direction) {
     playerPosition.x += playerSpeed;
   }
 
-  // Limitar movimiento
   const cameraWidth = 20;
   playerPosition.x = Math.max(-cameraWidth / 2 + 0.5, Math.min(cameraWidth / 2 - 0.5, playerPosition.x));
   const minY = playerPosition.y - 5;
   playerPosition.y = Math.max(minY, playerPosition.y);
 
-  // Enviar la nueva posición al hilo principal
   postMessage({ type: 'updatePosition', position: playerPosition });
 }
 
 function resetWorker() {
   playerPosition = { x: 0, y: 5, z: 0 };
 }
-
-

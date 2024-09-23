@@ -1,5 +1,3 @@
-// truckWorker.js
-
 let trucks = [];
 let truckIdCounter = 0;
 const cameraWidth = 20;
@@ -26,7 +24,6 @@ function createTruck(laneY) {
   };
   trucks.push(truck);
 
-  // Notificar al hilo principal para crear el camión
   postMessage({ type: 'newTruck', truck: truck });
 }
 
@@ -41,7 +38,6 @@ function updateTrucks() {
 
   trucks = trucks.filter(truck => !trucksToRemove.includes(truck.id));
 
-  // Enviar actualizaciones al hilo principal
   postMessage({ type: 'updateTrucks', trucks: trucks, trucksToRemove: trucksToRemove });
 }
 
@@ -50,5 +46,4 @@ function resetWorker() {
   truckIdCounter = 0;
 }
 
-// Iniciar el bucle de actualización
 setInterval(updateTrucks, 50);
