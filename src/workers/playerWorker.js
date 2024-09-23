@@ -1,4 +1,4 @@
-// src/data/playerWorker.js
+// playerWorker.js
 
 let playerPosition = { x: 0, y: 5, z: 0 };
 const playerSpeed = 0.2;
@@ -41,3 +41,5 @@ function movePlayer(direction) {
 function resetWorker() {
   playerPosition = { x: 0, y: 5, z: 0 };
 }
+
+
